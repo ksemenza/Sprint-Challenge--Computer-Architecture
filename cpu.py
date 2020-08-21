@@ -21,9 +21,16 @@ class CPU:
         self.heap_height = 0
 
         self.op_map = {1: {0: {0b0000: 'ADD',
+                               0b0001: 'SUB',
                                0b0111: 'CMP',
                                0b0110: 'DEC',
                                0b0101: 'INC',
+                               0b0100: 'MOD',
+                               0b1001: 'NOT',
+                               0b1010: 'OR',
+                               0b1011: 'XOR',
+                               0b1100: 'SHL',
+                               0b1101: 'SHR',
                                0b0010: 'MUL',
                                }},
                        0: {1: {0b0000: 'CALL',
@@ -204,6 +211,33 @@ class CPU:
             if comp_a < comp_b:
                 self.fl = self.fl & 0b00000100
                 self.fl = self.fl | 0b00000100
+                
+######### Bitwise logical operations                
+# AND & bitwise of A and B = 1 (A = 1 & B =1) = 1
+        elif op == 'AND':
+            anded = (int(self.reg[arg_1], 2) & int(self.reg[arg_2])) & 0xff
+            self.reg[arg_1] = f'{anded:08b}'
+# OR | bitwise of A or B = 1  (A = 1| B = 1)  = 1
+        elif op == 'OR':
+            ored = (int(self.reg[arg_1]) | int(self.reg[arg_2])) & 0xff
+            self.reg[arg_1] = f'{ored:08b}'
+#Exclusive-Or either, but no both A = 1 or B = 1, (A = 1 ^ B = 1)  = 1 
+        elif op == 'XOR':
+            xored = (int(self.reg[arg_1]) ^ int(self.reg[arg_2])) & 0xff
+            self.reg[arg_1] = f'{xored:08b}'
+# NOT flips state ~ A = 1 when A = 0 
+        elif op == 'NOT':
+            noted = int(~self.reg[arg_1], 2) & 0xff
+            self.reg[arg_1] = f'{noted:08b}'
+# Shift Left x << y
+        elif op == 'SHL':
+            shled = (int(self.reg[arg_1], 2) << int(self.reg[arg_2],2 )) & 0xff
+            self.reg[arg_1] = f'{shled:08b}'
+
+        elif op == 'SHR':
+            shred = (int(self.reg[arg_1], 2) << int(self.reg[arg_2], 2)) & 0xff
+            self.reg[arg_1] = f'{shred:08b}'
+
         else:
             raise ValueError(f"Unsupported ALU operation: {op}")
 
@@ -237,6 +271,7 @@ class CPU:
             _bytes = self.ir >> 6
             _alu = self.ir & 0b00100000
             alu = _alu >> 5
+            
             _adv_pc = self.ir & 0b00010000
             adv_pc = _adv_pc >> 4
             instruction = self.ir & 0b00001111
