@@ -1,5 +1,4 @@
 """CPU functionality."""
-
 import sys
 import os
 
@@ -10,7 +9,7 @@ class CPU:
     def __init__(self):
     #TODO Implemented all CPU Constructor
         self.ram = [0] * 256 # Random Access Memory, stores variables to keep track of running code
-        self.reg = [0x00] * 8 #
+        self.reg = [0x00] * 8 # Register stored value location of instructions
         self.sp = 0xf4  #Stack Pointer, 
         self.pc = 0x00  #Program Counter address of current executed instruction
         self.ir = 0x00 # Instruction Register, contains a copy of current executed instruction
@@ -21,19 +20,23 @@ class CPU:
         self.heap_height = 0
 
         self.op_map = {1: {0: {0b0000: 'ADD',
-                               0b0001: 'SUB',
+                               0b1000: 'AND',
                                0b0111: 'CMP',
                                0b0110: 'DEC',
+                               0b0011: 'DEV',
                                0b0101: 'INC',
                                0b0100: 'MOD',
+                               0b0010: 'MUL',
                                0b1001: 'NOT',
                                0b1010: 'OR',
-                               0b1011: 'XOR',
                                0b1100: 'SHL',
                                0b1101: 'SHR',
-                               0b0010: 'MUL',
+                               0b0001: 'SUB',
+                               0b1011: 'XOR',
                                }},
                        0: {1: {0b0000: 'CALL',
+                               0b0010: 'INT',
+                               0b0011: 'IRET',
                                0b0101: 'JEQ',
                                0b1010: 'JGE',
                                0b0111: 'JGT',
@@ -51,6 +54,7 @@ class CPU:
                                0b1000: 'PRA',
                                0b0111: 'PRN',
                                0b0101: 'PUSH',
+                               0b0100: 'ST',
                                }
                            }
                        }
@@ -97,22 +101,19 @@ class CPU:
 #Load
         elif op == 'LD':
             self.reg[arg_1] = self.reg[arg_2]
-# PUSH decrement SP 
-#Store value in register RAM the address of the SP
+
+# Add New 
         elif op == 'PUSH':
             self.sp -= 1
-            print(self.sp, self.heap_height)
+            # print(self.sp, self.heap_height)
             if self.sp <= self.heap_height:
                 raise IndexError('Stack Overflow')
             self.ram[self.sp] = self.reg[arg_1]
-# POP GET value form RAM stored in the SP address which is in the register
-# Increase SP 
+# Delete 
         elif op == 'POP':
             self.reg[arg_1] = self.ram[self.sp]
             self.sp += 1
-# Request subroutine (push address to next instruction on to stack, moves PC to address of subroutine)
-# and can RET form that 
-# subroutine(ie pop the value form the top of the stack into the PC)
+# Request 
         elif op == 'CALL':
             self.sp -= 1
             self.ram[self.sp] = self.pc + 1
@@ -166,6 +167,7 @@ class CPU:
                 self.pc = int(self.reg[arg_1], 2)
             else:
                 self.pc += 1
+
         else:
             raise ValueError(f'No such opperation exists {op}')
 
@@ -198,6 +200,10 @@ class CPU:
         elif op == 'DIV':
             dived = (int(self.reg[arg_1], 2) >> int(self.reg[arg_2], 2)) & 0xff
             self.reg[arg_1] = f'{dived:08b}'
+# Modulo division remainder
+        elif op == 'MOD':
+            modded = (int(self.reg[arg_1], 2) % int(self.reg[arg_2], 2)) & 0xff
+            self.reg[arg_1] = f'{modded:08b}'
 # Chip-Multiprocessing
         elif op == 'CMP':
             comp_a, comp_b = int(self.reg[arg_1], 2), int(self.reg[arg_2], 2)
@@ -211,8 +217,8 @@ class CPU:
             if comp_a < comp_b:
                 self.fl = self.fl & 0b00000100
                 self.fl = self.fl | 0b00000100
-                
-######### Bitwise logical operations                
+#Bitwise logical operations                
+
 # AND & bitwise of A and B = 1 (A = 1 & B =1) = 1
         elif op == 'AND':
             anded = (int(self.reg[arg_1], 2) & int(self.reg[arg_2])) & 0xff
@@ -233,9 +239,9 @@ class CPU:
         elif op == 'SHL':
             shled = (int(self.reg[arg_1], 2) << int(self.reg[arg_2],2 )) & 0xff
             self.reg[arg_1] = f'{shled:08b}'
-
+# Shift Right x >> y
         elif op == 'SHR':
-            shred = (int(self.reg[arg_1], 2) << int(self.reg[arg_2], 2)) & 0xff
+            shred = (int(self.reg[arg_1], 2) >> int(self.reg[arg_2], 2)) & 0xff
             self.reg[arg_1] = f'{shred:08b}'
 
         else:
@@ -271,7 +277,6 @@ class CPU:
             _bytes = self.ir >> 6
             _alu = self.ir & 0b00100000
             alu = _alu >> 5
-            
             _adv_pc = self.ir & 0b00010000
             adv_pc = _adv_pc >> 4
             instruction = self.ir & 0b00001111
